@@ -1,5 +1,5 @@
 const express = require('express');
-const MongoClient = require('mongodb').MongoClient;
+const { MongoClient } = require('mongodb');
 
 const app = express();
 
@@ -17,23 +17,31 @@ app.use((req, res, next) => {
 
 // Ruta para obtener los datos de la colección historial
 app.get('/historial', async (req, res) => {
+  let client;
+
   try {
     // Conectar a la base de datos
-    const client = await MongoClient.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
-    const db = client.db(dbName);
+    client = new MongoClient(mongoURI);
+    await client.connect();
     
     // Obtener los datos de la colección historial
+    const db = client.db(dbName);
     const collection = db.collection('data');
     const data = await collection.find({}).toArray();
+
+    // Agrega logs para verificar si se obtienen datos correctamente
+    console.log('Datos obtenidos de la colección:', data);
     
     // Enviar los datos como respuesta
     res.json(data);
-    
-    // Cerrar la conexión
-    client.close();
   } catch (error) {
     console.error('Error al obtener datos de la colección historial:', error);
     res.status(500).json({ error: 'Error al obtener datos de la colección historial' });
+  } finally {
+    // Cerrar la conexión en el bloque finally para asegurarse de que siempre se cierre
+    if (client) {
+      await client.close();
+    }
   }
 });
 
